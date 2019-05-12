@@ -1,0 +1,254 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+```{r}
+library(readr)
+# library(reshape2)
+library(dplyr)
+df <- read_csv("cf_partitivi_completo.csv") 
+df2 <- read_csv("cf_partitivi_completo_aggreg.csv")
+df3 <- read_csv("Partitive_intro_judgements2.csv")
+df4 <- read_csv("cf_partitivi_completo_aggreg2.csv")
+# View(df)
+
+options(scipen=999)
+s <- (c(df3$sentence))
+#print(s)
+#newdata <- subset(df, unit_id = "1239598255",
+#select=c(rate_this_sentence))
+
+```
+
+```{r}
+summary(df4)
+```
+
+
+Now, we look at the distribution of judgments. 
+
+```{r}
+#hist(df$rate_this_sentence)
+table(df$rate_this_sentence)
+
+hist(df3$rate_this_sentence_variance)
+
+```
+
+
+
+Now the actual code to compare significantly different sentences. The judgments to be compared have the some number in the column "pair" (hand added in the .csv file downloaded by CF).
+
+```{r}
+
+unisen <- c(unique(df$sentence)) # collect unique sentences
+counter <- 0
+
+for (i in unisen){
+  ig <- c(filter(df, sentence == i)$rate_this_sentence)  ### giudizi di quale frase
+  im <- c(filter(df, sentence == i)$pair)             ### con chi accoppiare
+  ip <- filter(df, sentence == i)$unit_id[1]          ### get sentence number
+  #cat(sprintf("Outer loop %s with match index %s \n", i, im[1]))
+  if (length(ig) < 2){
+      cat(sprintf("Not enough judgments for %s", i))
+      break
+      }
+  for (j in unisen){
+    #cat(sprintf("Inner loop %s with match index %s \n", j, jm[1]))
+    jp <- filter(df, sentence == j)$unit_id[1]    ### get sentence number
+    if (jp < ip){                                 ### compare unit numbers  
+      jg <- c(filter(df, sentence == j)$rate_this_sentence)
+      jm <- c(filter(df, sentence == j)$pair)
+      
+       if (length(jg) < 2){
+      cat(sprintf("Not enough judgments for %s", j))
+      break
+      }
+      # cat("\n i is different from j\n")
+      if (jm[1] == im[1]){        ### if the sentences are part of a minimal pair
+        pval <- wilcox.test(ig,jg)     ### get p.value
+        if (pval$p.value < 0.05){
+          counter <- counter + 1
+          cat(sprintf("S1: %s \n Mean: %s SD: %s \n", i,  mean(ig), sd(ig)))
+          cat(sprintf("S2: %s \n Mean: %s SD: %s \n", j, mean(jg), sd(jg)))
+          cat(sprintf("P value is %s \n", pval$p.value, options(scipen=999)))
+          cat(sprintf("%s ===================================================================\n", counter))
+        }
+      }
+    } 
+  }
+}
+
+```
+
+Try
+
+
+```
+{r}
+
+#print (c(filter(df3, MinPair == 1))[2])
+#print(filter(df, Sentence == "AAA"))
+a <- c(1, 3)
+b <- c(6, 5, 5, 3, 2, 6, 7, 8)
+ab <- t.test(a,b)
+# sprintf("and the p is %s with mean %s", ab, mean(a))
+s1 <- "uno"
+s2 <- "due"
+
+l <- list()
+l <- list(l, paste(s1,s2))
+l <- list(l, paste(s1,s2))
+print(l)
+print(l)
+
+```
+
+Some unused code from the web...
+```
+t.test_mean <- function(m1,m2,s1,s2,n1,n2,m0=0,equal.variance=FALSE)
+{
+    if( equal.variance==FALSE ) 
+    {
+        se <- sqrt( (s1^2/n1) + (s2^2/n2) )
+        # welch-satterthwaite df
+        df <- ( (s1^2/n1 + s2^2/n2)^2 )/( (s1^2/n1)^2/(n1-1) + (s2^2/n2)^2/(n2-1) )
+    } else
+    {
+        # pooled standard deviation, scaled by the sample sizes
+        se <- sqrt( (1/n1 + 1/n2) * ((n1-1)*s1^2 + (n2-1)*s2^2)/(n1+n2-2) ) 
+        df <- n1+n2-2
+    }      
+    t <- (m1-m2-m0)/se 
+    #dat <- c(m1-m2, se, t, 2*pt(-abs(t),df))    
+    #names(dat) <- c("Difference of means", "Std Error", "t", "p-value")
+    #return(dat)
+    return(2*pt(-abs(t),df))
+}
+```
+
+
+Now the code to compare significantly different sentences, starting from their mean ans SD (provided by the aggregated result file). The judgments to be compared have the some number in the column "pair" (hand added in the .csv file downloaded by CF). The loading is done in a previous chunck. 
+```{r}
+
+unisen <- c(df4$sentence) # collect unique sentences (there could still be repetitions)
+summary(unisen)
+
+```
+
+```{r}
+
+counter <- 0
+df <- df4
+
+# options(warn=2)
+
+for (i in unisen){
+  ig <- filter(df, sentence == i)$rate_this_sentence  ### media dei giudizi per frase i
+  iv <- filter(df, sentence == i)$rate_this_sentence_variance  ### varianza per frase i
+  inn <- filter(df, sentence == i)$trusted_judgments  ### numero di giudizi per frase i
+  im <- filter(df, sentence == i)$pair           ### con chi accoppiare
+  ip <- filter(df, sentence == i)$unit_id[1]          ### get sentence number
+  cat(sprintf("Outer loop %s with match index %s, rating %s, variance %s, judgers %s, pair %s \n", i, im, ig, iv, inn, im))
+  for (j in unisen){
+    #cat(sprintf("     Inner loop %s with match index %s rating %s,  variance %s, judgers %s, pair %s \n", j, jm, jg, jv, jnn, jm))
+    jp <- filter(df, sentence == j)$unit_id[1]    ### get sentence number
+    if (jp < ip){                                 ### compare unit numbers, so as not to compare sentences twice
+      jg <- filter(df, sentence == j)$rate_this_sentence         # same as above
+      jv <- filter(df, sentence == j)$rate_this_sentence_variance
+      jnn <- filter(df, sentence == i)$trusted_judgments  ### numero di giudizi per frase i
+      jm <- filter(df, sentence == j)$pair
+
+      # cat("\n i is different from j\n")
+      if (is.na(jm) || is.na(im)){         # making sure "pair" i1s not NA, which breaks the logical test
+        break
+        }
+      else {
+        if (jm  == im & im == 100){        ### if the sentences are part of a minimal pair. Additionally, if it is pair 2 (to be changed for other cases...)
+        pval <- wilcox.test_mean(ig,jg,iv,jv,inn,jnn)     ### get p.value using the function defined above (apparently, it must be before)
+        if (pval < 0.1){
+          counter <- counter + 1
+          cat(sprintf("S1: %s [Mean: %s SD: %s pair %s]\n", i, ig, iv, jm))
+          cat(sprintf("S2: %s [Mean: %s SD: %s] \n", j, jg, jv))
+          cat(sprintf("P value is %s \n", pval, options(scipen=999)))
+          cat(sprintf("%s ===================================================================\n", counter))
+          }
+        }
+      }
+    }
+  }
+}  
+
+        
+
+```
+
+We now write a function which translates the CF format into the Google Forms format... 
+This relies on the "sentence" columns being called "sentence" and the judgment field "rate_this_sentence"  
+
+```{r}
+
+# assuming the CF-shaped dataframe df, outputfile is cf_partitivi_Gstyle.csv
+# Separator is |
+
+outputfile <- "cf_partitivi_Gstyle.csv"
+unisen <- c(unique(df$sentence)) # collect unique sentences
+counter <- 0
+maxlen <- 0
+
+for (i in unisen){
+  ig <- c(filter(df, sentence == i)$rate_this_sentence)  ### giudizi di quale frase
+   #cat(sprintf("S = %s| judglen = %s \n"| i, length(ig)))
+  if (length(ig) > maxlen){
+    maxlen <- length(ig)         # looking for the highest number of ratings
+  }
+}
+
+ cat(sprintf("Max judgments %s, ", maxlen))
+
+sink(outputfile)      # From here on it write everything to the outfile 
+# Print header
+  cat(sprintf(" Sentence|"))
+  for (j in 1:maxlen){
+    cat(sprintf(" J%s|", j))
+  }
+  cat(sprintf("Pair|Average|SD|ID|#_of_Judgs|Notes\n"))
+  
+for (i in unisen){
+  ig <- c(filter(df, sentence == i)$rate_this_sentence)  ### giudizi di quale frase
+  #im <- unique(filter(df, sentence == i)$pair)          ### con chi accoppiare (tolto, meglio nell'output)
+  ip <- filter(df, sentence == i)$unit_id[1]           ### get sentence number
+    cat(sprintf("%s|", i)) # first, the sentence
+    for (j in 1:maxlen){   # then, as many judgment columsn as there are judgments of any sentence
+      #cat(sprintf("%s| ", ig[j]))
+      if (is.na(ig[j])) {
+          cat(sprintf(" |"))
+        }
+      else {
+          cat(sprintf("%s|", ig[j]))
+      }
+    }
+    cat(sprintf("1|", im)) # the default pairing (to be changed on the excel)
+    cat(sprintf("%g|", mean(ig))) #  the average
+    cat(sprintf("%g|", sd(ig))) # the standard deviation
+    cat(sprintf("%g|", ip)) # sentence ID, a blank for notes, and newline
+    cat(sprintf("%d| \n", length(ig)))
+}
+sink()
+  
+  
+  
+```
+
