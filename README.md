@@ -1,5 +1,5 @@
-This are the data and script files for the paper "Partitives and Partitivity",
-by Michelangelo Falco e Roberto Zamparelli.
+These are the data and script files for the paper "Partitives and Partitivity",
+by Michelangelo Falco and Roberto Zamparelli.
 
 
 "Giudizi_Partitivi_Italiano.ods" contains the example sentences
